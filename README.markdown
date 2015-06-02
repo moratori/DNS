@@ -1,4 +1,4 @@
-# Dns
+# DNS
 implementation of authoritative dns server
 
 
