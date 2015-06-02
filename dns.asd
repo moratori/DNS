@@ -16,14 +16,18 @@
   :version "0.1"
   :author "moratori"
   :license "LLGPL"
-  :depends-on (:usocket :cl-ppcre)
+  :depends-on (:usocket :cl-ppcre :cl-annot)
   :components ((:module "src"
                 :components
                 (
 (:file "errors")
 (:file "struct")
-(:file "util")
-(:file "main")
+(:file "util.bit")
+(:file "util.assemble")
+(:file "assemble")
+(:file "resolver.stub")
+(:file "parse")
+(:file "sender")
 (:file "dns")
 
 )))
