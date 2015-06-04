@@ -18,7 +18,7 @@
 
 
 
-(defun send (host port dns-packet &key (timeout 1) (callback (lambda (s))))
+(defun send (host port dns-packet &key (timeout 1) (callback #'socket-close))
   (assert (typep dns-packet 'dns-packet))
   (let ((sock (socket-connect 
                 host port 
@@ -26,5 +26,4 @@
                 :timeout timeout))
         (buf (->raw dns-packet)))
     (socket-send sock buf (length buf))
-    (funcall callback sock)
-    (socket-close sock)))
+    (funcall callback sock)))

@@ -5,19 +5,11 @@
         :usocket
         :dns.errors
         :dns.struct
+        :dns.util.assemble
         :dns.util.bit
         )
-  (:import-from 
-    :cl-ppcre
-    :split)
-  (:import-from
-    :dns.util.assemble
-    :set-domain
-    :domain-len
-    :incremental-setf
-    )
+  
   (:export 
-    :concat-all-section
     :->raw
     )
   (:documentation 
@@ -30,95 +22,90 @@
 
 
 
-
-
-
-(defmethod ->raw ((obj dns-packet))
-  "DNSパケットを送信可能な配列にする"
-  (labels 
-    ((inner-concat (list)
-       (if (null list)
-         #()
-         (reduce 
-           (lambda (result x) 
-             (concat-all-section result x)) 
-           (mapcar #'->raw list)))))
-    (concat-all-section
-      (->raw (dns-packet-header obj))
-      (inner-concat (dns-packet-question obj))
-      (inner-concat (dns-packet-answer   obj))
-      (inner-concat (dns-packet-authority obj))
-      (inner-concat (dns-packet-additional obj)))))
-
-
-
-(defmethod ->raw ((obj dns-header))
-  "dns-header構造体から送信可能な(unsigned-byte 8)配列を作って返す"
-  (let ((result 
+(defun ->raw (dns-packet)
+  "DNSパケットを送信可能な(unsigned 8)配列にして返す"
+  (assert (typep dns-packet 'dns-packet))
+  (let* ((result 
           (make-array 
-            12 :element-type '(unsigned-byte 8)))) 
-    (set-16 (dns-header-id obj) result 0)
-    (set-16 (dns-header-qdcount obj) result 4)
-    (set-16 (dns-header-ancount obj) result 6)
-    (set-16 (dns-header-nscount obj) result 8)
-    (set-16 (dns-header-arcount obj) result 10)
-    (setf (aref result 2) 
+            (size dns-packet)
+            :element-type '(unsigned-byte 8)))
+         (i (%write-section (dns-packet-header dns-packet) result 0)))
+    (labels 
+      ((write-all (list array start)
+         (loop 
+           with i = start
+           finally (return i)
+           for each in list
+           do (setf i (%write-section each array i)))))
+      (setf i (write-all (dns-packet-question dns-packet) result i))
+      (setf i (write-all (dns-packet-answer   dns-packet) result i))
+      (setf i (write-all (dns-packet-authority dns-packet) result i))
+      (setf i (write-all (dns-packet-additional dns-packet) result i)))
+    result))
+
+
+
+(defgeneric %write-section (dns-header-obj array start-index)
+  (:documentation 
+    "DNSヘッダや各セクションの構造体を(unsigned-byte 8)配列に変換し
+     start-indexで表されるところからarrayに書き込んで行く"))
+
+(defmethod %write-section ((obj dns-header) result start)
+    (set-16 (dns-header-id obj) result start)
+    (set-16 (dns-header-qdcount obj) result (+ start 4))
+    (set-16 (dns-header-ancount obj) result (+ start 6))
+    (set-16 (dns-header-nscount obj) result (+ start 8))
+    (set-16 (dns-header-arcount obj) result (+ start 10))
+    (setf (aref result (+ start 2)) 
           (concat-bit 
             (dns-header-qr obj)
             (dns-header-opcode obj)
             (dns-header-aa obj)
             (dns-header-tc obj)
             (dns-header-rd obj)))
-    (setf (aref result 3) 
+    (setf (aref result (+ start 3)) 
           (concat-bit 
             (dns-header-ra obj)
             (dns-header-z obj)
             (dns-header-ad obj)
             (dns-header-cd obj)
-            (dns-header-rcode obj)))
-    result))
+            (dns-header-rcode obj))) 
+    12)
 
-
-
-(defmethod ->raw ((obj dns-question))
-  "dns-question構造体から送信可能な(unsigned-byte 8)配列を作って返す"
+(defmethod %write-section ((obj dns-question) result start)
   (let* ((name (dns-question-qname obj))
          (type (dns-question-qtype obj))
-         (class (dns-question-qclass obj))
-         (sp   (split #\. name))
-         (result 
-           (make-array (+ (domain-len sp) 4)
-             :element-type '(unsigned-byte 8))))  
-    (let ((i (set-domain sp result 0)))
-      (incremental-setf i
-        (aref result i) (ldb (byte 8 8) type)
-        (aref result i) (ldb (byte 8 0) type)
-        (aref result i) (ldb (byte 8 8) class)
-        (aref result i) (ldb (byte 8 0) class)))
-    result))
+         (class (dns-question-qclass obj)))  
+    (let ((i (set-domain name result start)))
+      (set-16 type result i)
+      (incf i 2)
+      (set-16 class result i)
+      (+ i 1))))
 
 
 
-(defmethod ->raw ((obj dns-rest))
-  "dns-rest構造体から送信可能な(unsigned-byte 8)配列を作って返す"
-
-  )
-
-
-
-
-(defun concat-all-section (&rest args)
-  "各セクションをくっつけて一つのdnsパケットを作る"
-  (let* ((len (apply #'+ (mapcar #'length args)))
-         (result (make-array len :element-type '(unsigned-byte 8))))
-    (let ((i 0))
-      (loop for array in args
-            do 
-            (loop for elm across array
-                  do
-                  (setf (aref result i) elm)
-                  (incf i))))
-    result))
- 
+(defmethod %write-section ((obj dns-rest) result start)
+  (let ((name (dns-rest-name obj))
+        (type (dns-rest-type obj))
+        (class (dns-rest-class obj))
+        (ttl (dns-rest-ttl obj))
+        (rdlength (dns-rest-rdlength obj))
+        (rdata (dns-rest-rdata obj)))
+    (let ((i (set-domain name result start)))
+      (set-16 type result i)
+      (incf i 2)
+      (set-16 class result i)
+      (incf i 2)
+      (set-16 ttl result i)
+      (incf i 2)
+      (set-16 rdlength result i)
+      (incf i)
+      (loop 
+        with index = i
+        finally (return index)
+        for ch across rdata
+        do 
+          (setf (aref result index) ch)
+          (incf index)))))
 
 

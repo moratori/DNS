@@ -26,6 +26,7 @@
 (:file "util.assemble")
 (:file "assemble")
 (:file "resolver.stub")
+(:file "resolver.full")
 (:file "parse")
 (:file "sender")
 (:file "dns")

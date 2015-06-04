@@ -4,9 +4,12 @@
 (defpackage :dns.resolver.stub
   (:use :cl
         :dns.errors
-        :usocket
         :dns.struct
         :dns.assemble)
+  (:import-from
+    :cl-ppcre
+    :split
+    )
   (:export
     :make-Arecord-query
     )
@@ -38,7 +41,7 @@
     :question
      (list 
         (make-dns-question
-          :qname domain
+          :qname (split #\. domain)
           :qtype 1
           :qclass 1))))
 

@@ -1,31 +1,17 @@
 
 (in-package :cl-user)
 (defpackage dns.util.assemble
-  (:use :cl)
+  (:use :cl
+        :dns.struct
+        )
   (:export 
+    :size
     :set-domain
     :domain-len
     :incremental-setf
     )
   )
 (in-package :dns.util.assemble)
-
-
-
-(defmacro incremental-setf (index &rest body)
-  `(setf 
-     ,@(loop
-         with result = nil
-         with len = (length body)
-         finally (return (nreverse result))
-         for each in body
-         for i from 0 
-         do
-           (push each result)
-           (when (and (zerop (mod (1+ i) 2))
-                      (< i (1- len)) )
-             (push index result)
-             (push `(1+ ,index) result)))))
 
 
 
@@ -56,3 +42,45 @@
      (length splited-domain)
      (apply #'+ (mapcar #'length splited-domain))))
  
+
+
+
+(defmethod size ((obj dns-packet))
+  "DNSパケットを(unsigned-byte 8)配列に直すときに
+   長さを求めるのに使う"
+  (labels 
+    ((sum (list)
+       (reduce 
+         #'+
+         (mapcar #'size list)
+         :initial-value 0)))
+    (+
+      (size (dns-packet-header obj))
+      (sum (dns-packet-question obj))
+      (sum (dns-packet-answer obj))
+      (sum (dns-packet-authority obj))
+      (sum (dns-packet-additional obj)))))
+
+
+(defmethod size ((obj dns-header))
+  "12Byteの固定長"
+  12) 
+ 
+
+(defmethod size ((obj dns-question))
+  (+ 
+    (domain-len (dns-question-qname obj))
+    2 ; qtype len
+    2 ; qclass len
+    ))
+
+(defmethod size ((obj dns-rest))
+  (+ 
+    (domain-len (dns-rest-name obj))
+    2 ; type len
+    2 ; class len
+    2 ; ttl len
+    2 ; rdatalen len
+    (dns-rest-rdlength obj)))
+
+

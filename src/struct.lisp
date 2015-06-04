@@ -49,7 +49,7 @@
 @export-structure
 (defstruct dns-question 
   "Questionセクションを表す構造体"
-  (qname "" :type string)
+  (qname nil :type list)
   (qtype 0 :type  (integer 0 65535))
   (qclass 0 :type (integer 0 65535)))
 
@@ -57,7 +57,7 @@
 (defstruct dns-rest
   "Answer,Authority,Additionalの各セクションのフォーマットは全て同じであるため
    この構造体でそれらを表す"
-  (name "" :type string)
+  (name nil :type list)
   (type 0 :type (integer 0 65535))
   (class 0 :type (integer 0 65535))
   (ttl 0 :type (integer 0 65535))
