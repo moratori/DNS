@@ -55,11 +55,11 @@
          (mapcar #'size list)
          :initial-value 0)))
     (+
-      (size (dns-packet-header obj))
-      (sum (dns-packet-question obj))
-      (sum (dns-packet-answer obj))
-      (sum (dns-packet-authority obj))
-      (sum (dns-packet-additional obj)))))
+      (print (size (dns-packet-header obj)))
+      (print (sum (dns-packet-question obj)))
+      (print (sum (dns-packet-answer obj)))
+      (print (sum (dns-packet-authority obj)))
+      (print (sum (dns-packet-additional obj))))))
 
 
 (defmethod size ((obj dns-header))

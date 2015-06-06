@@ -80,7 +80,7 @@
       (set-16 type result i)
       (incf i 2)
       (set-16 class result i)
-      (+ i 1))))
+      (+ i 2))))
 
 
 
@@ -99,7 +99,7 @@
       (set-16 ttl result i)
       (incf i 2)
       (set-16 rdlength result i)
-      (incf i)
+      (incf i 2)
       (loop 
         with index = i
         finally (return index)

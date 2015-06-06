@@ -62,6 +62,6 @@
   (class 0 :type (integer 0 65535))
   (ttl 0 :type (integer 0 65535))
   (rdlength 0 :type (integer 0 65535))
-  (rdata "" :type string))
+  (rdata "" :type array))
 
 

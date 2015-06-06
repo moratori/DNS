@@ -23,6 +23,7 @@
 
 (defun make-Arecord-query (domain)
   "domainについてAレコードを問い合わせる標準的なクエリを作る"
+  (assert (typep domain 'string))
   (make-dns-packet
     :header
      (make-dns-header
