@@ -7,18 +7,18 @@
         :dns.errors
         :dns.struct
         :dns.assemble
+        :cl-annot
         )
-  (:export 
-    :send
-    )
   (:documentation 
     "DNSパケットの送信部分"))
 (in-package :dns.sender)
+(enable-annot-syntax)
 
 
 
-
-(defun send (host port dns-packet &key (timeout 1) (callback #'socket-close))
+@export
+(defun send (host port dns-packet 
+                  &key (timeout 1) (callback #'socket-close))
   (assert (typep dns-packet 'dns-packet))
   (let ((sock (socket-connect 
                 host port 
@@ -27,3 +27,4 @@
         (buf (->raw dns-packet)))
     (socket-send sock buf (length buf))
     (funcall callback sock)))
+

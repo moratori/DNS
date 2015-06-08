@@ -25,10 +25,10 @@
 (:file "util.bit")
 (:file "util.assemble")
 (:file "assemble")
-(:file "resolver.stub")
-(:file "resolver.full")
 (:file "parse")
+(:file "templates")
 (:file "sender")
+(:file "resolver.stub")
 (:file "dns")
 
 )))

@@ -3,18 +3,16 @@
 (defpackage dns.util.assemble
   (:use :cl
         :dns.struct
+        :cl-annot
         )
-  (:export 
-    :size
-    :set-domain
-    :domain-len
-    :incremental-setf
-    )
   )
 (in-package :dns.util.assemble)
 
 
+(enable-annot-syntax)
 
+
+@export
 (defun set-domain (splited-domain array i)
   "arrayのi番目からdomain('www' 'yahoo' 'co' 'jp')を
    03 77 77 77 ... みたいなふうにsetする
@@ -35,7 +33,7 @@
     (setf (aref array index) 0)
     (1+ index)))
 
-
+@export
 (defun domain-len (splited-domain)
   "domain名のために使う長さを返す"
   (+ 1
@@ -45,6 +43,7 @@
 
 
 
+@export
 (defmethod size ((obj dns-packet))
   "DNSパケットを(unsigned-byte 8)配列に直すときに
    長さを求めるのに使う"
@@ -55,11 +54,11 @@
          (mapcar #'size list)
          :initial-value 0)))
     (+
-      (print (size (dns-packet-header obj)))
-      (print (sum (dns-packet-question obj)))
-      (print (sum (dns-packet-answer obj)))
-      (print (sum (dns-packet-authority obj)))
-      (print (sum (dns-packet-additional obj))))))
+      (size (dns-packet-header obj))
+      (sum (dns-packet-question obj))
+      (sum (dns-packet-answer obj))
+      (sum (dns-packet-authority obj))
+      (sum (dns-packet-additional obj)))))
 
 
 (defmethod size ((obj dns-header))
@@ -79,7 +78,7 @@
     (domain-len (dns-rest-name obj))
     2 ; type len
     2 ; class len
-    2 ; ttl len
+    4 ; ttl len
     2 ; rdatalen len
     (dns-rest-rdlength obj)))
 

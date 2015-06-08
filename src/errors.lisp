@@ -6,3 +6,15 @@
 (in-package :dns.errors)
 
 
+
+(define-condition malformed ()
+  ()
+  )
+
+
+(define-condition malformed-header ()
+  ((msg 
+     :initform ""
+     :initarg :msg
+     :accessor msg))) 
+

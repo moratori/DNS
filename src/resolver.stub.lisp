@@ -3,47 +3,55 @@
 (in-package :cl-user)
 (defpackage :dns.resolver.stub
   (:use :cl
-        :dns.errors
         :dns.struct
-        :dns.assemble)
-  (:import-from
-    :cl-ppcre
-    :split
-    )
-  (:export
-    :make-Arecord-query
-    )
+        :dns.sender
+        :usocket
+        :dns.parse
+        :dns.sender
+        :dns.templates
+        :cl-annot)
   )
+
 (in-package :dns.resolver.stub)
-
-
-(setf *random-state* (make-random-state t))
+(enable-annot-syntax)
 
 
 
-(defun make-Arecord-query (domain)
-  "domainについてAレコードを問い合わせる標準的なクエリを作る"
-  (assert (typep domain 'string))
-  (make-dns-packet
-    :header
-     (make-dns-header
-        :id (random 65535)
-        :qr 0
-        :opcode 0
-        :aa 0
-        :tc 0
-        :rd 1
-        :ra 0
-        :z  0
-        :ad 0
-        :cd 0
-        :rcode 0
-        :qdcount 1)
-    :question
-     (list 
-        (make-dns-question
-          :qname (split #\. domain)
-          :qtype 1
-          :qclass 1))))
+(defun handler (q socket)
+  (let* ((len 512)
+         (dns-packet-array 
+           (make-array 
+             len
+             :element-type '(unsigned-byte 8)))) 
+    (socket-receive socket dns-packet-array len)
+    (socket-close socket)
+    (print (parse-array-to-dns-packet dns-packet-array))
+    
+    ))
+
+
+@export
+(defun enquire (query-format cache-server &key (port 53) (timeout 1))
+  (send 
+    cache-server 
+    port 
+    (enquire-packet query-format)
+    :timeout timeout
+    :callback (lambda (s) (handler query-format s)))) 
+
+
+
+(defmethod enquire-packet ((q a-record))
+  (make-query 
+    (id q) (rd q) (name q) 1))
+
+
+(defmethod enquire-packet ((q ns-record))
+  
+  )
+
+
+(defmethod enquire-packet ((q query))
+  (error "query not implemented"))
 
 

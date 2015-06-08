@@ -17,7 +17,7 @@
 @export-structure
 (defstruct dns-packet 
   "5つのセクションからなるDNSパケット"
-  (header nil :type dns-header)
+  (header nil)
   ;; following slot type is (list dns-question)
   (question nil :type   list)
   ;; following slots type is (list dns-rest)
@@ -35,6 +35,7 @@
   (aa 0 :type bit)
   (tc 0 :type bit)
   (rd 0 :type bit)
+
   (ra 0 :type bit)
   (z  0 :type bit)
   (ad 0 :type bit)
@@ -60,8 +61,34 @@
   (name nil :type list)
   (type 0 :type (integer 0 65535))
   (class 0 :type (integer 0 65535))
-  (ttl 0 :type (integer 0 65535))
+  (ttl 0 :type (integer 0 4294967295))
   (rdlength 0 :type (integer 0 65535))
-  (rdata "" :type array))
+  (rdata nil :type (or null (array (unsigned-byte 8)))))
 
+
+
+@export 
+@export-accessors
+(defclass query ()
+  ((id 
+     :initform 0
+     :initarg :id 
+     :reader id)
+   (rd 
+     :initform t 
+     :initarg :rd 
+     :reader rd)
+   (name  
+     :initform "."
+     :initarg  :name 
+     :reader name)))
+
+@export
+(defclass a-record (query)
+  ())
+
+
+@export 
+(defclass ns-record (query)
+  ())
 

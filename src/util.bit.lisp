@@ -1,15 +1,24 @@
 
 (in-package :cl-user)
-(defpackage dns.util.bit
+(defpackage :dns.util.bit
   (:use :cl
+        :cl-annot
         )
-  (:export 
-    :set-16
-    :concat-bit
-    )
   )
 (in-package :dns.util.bit)
 
+(enable-annot-syntax)
+
+
+@export 
+(defun read-number (array start size)
+  "unsigned-byte 8 の配列arrayのstartからsize 
+   分だけ読んで整数にして返す"
+  (assert (typep array '(array (unsigned-byte 8) *)))
+  (concat-bit 
+    (loop 
+      for index from start below (+ start size) 
+      collect (list (aref array index) 8)))) 
 
 
 (defun split-16-to-88 (n)
@@ -47,6 +56,7 @@
     for each in bit-list
     summing (* each (expt 2 i)))) 
 
+@export
 (defun set-16 (n array index)
   "16bitで表される数nを1Byte毎に分割して
    それぞれを配列のindex,index+1で表される場所に格納"
@@ -57,12 +67,21 @@
     (setf (aref array (1+ index)) b)))
 
 
-(defun concat-bit (&rest argv) 
+(defun integer->bit-list-with-size (sized-int)
+  (destructuring-bind 
+    (int size) sized-int
+    (let ((r (integer->bit-list int)))
+    (when (< (length r) size)
+      (loop 
+        repeat (- size (length r))
+        do (push 0 r)))
+    r))) 
+
+@export
+(defun concat-bit (sized-int) 
   "引数に与えられた整数を並べた時にできる数を返す
    (concat-bit 1 2 3) -> 1 10 11 => 27"
   (bit-list->integer 
-    (mapcan #'integer->bit-list argv)))
-
-
-
-
+    (mapcan 
+      #'integer->bit-list-with-size 
+      sized-int)))

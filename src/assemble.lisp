@@ -7,23 +7,18 @@
         :dns.struct
         :dns.util.assemble
         :dns.util.bit
+        :cl-annot
         )
   
-  (:export 
-    :->raw
-    )
   (:documentation 
-    "DNSパケットの組み立てを行う"
-    )
-  )
+    "DNSパケットの組み立てを行う"))
 (in-package :dns.assemble)
+(enable-annot-syntax)
 
 
-
-
-
+@export
 (defun ->raw (dns-packet)
-  "DNSパケットを送信可能な(unsigned 8)配列にして返す"
+  "DNSパケットを送信可能な(unsigned-byte 8)配列にして返す"
   (assert (typep dns-packet 'dns-packet))
   (let* ((result 
           (make-array 
@@ -37,13 +32,11 @@
            finally (return i)
            for each in list
            do (setf i (%write-section each array i)))))
-      (setf i (write-all (dns-packet-question dns-packet) result i))
-      (setf i (write-all (dns-packet-answer   dns-packet) result i))
-      (setf i (write-all (dns-packet-authority dns-packet) result i))
+      (setf i (write-all (dns-packet-question dns-packet)   result i))
+      (setf i (write-all (dns-packet-answer   dns-packet)   result i))
+      (setf i (write-all (dns-packet-authority dns-packet)  result i))
       (setf i (write-all (dns-packet-additional dns-packet) result i)))
     result))
-
-
 
 (defgeneric %write-section (dns-header-obj array start-index)
   (:documentation 
@@ -58,54 +51,39 @@
     (set-16 (dns-header-arcount obj) result (+ start 10))
     (setf (aref result (+ start 2)) 
           (concat-bit 
-            (dns-header-qr obj)
-            (dns-header-opcode obj)
-            (dns-header-aa obj)
-            (dns-header-tc obj)
-            (dns-header-rd obj)))
+            `((,(dns-header-qr obj) 1)
+              (,(dns-header-opcode obj) 4) 
+              (,(dns-header-aa obj) 1)
+              (,(dns-header-tc obj) 1)
+              (,(dns-header-rd obj) 1))))
     (setf (aref result (+ start 3)) 
           (concat-bit 
-            (dns-header-ra obj)
-            (dns-header-z obj)
-            (dns-header-ad obj)
-            (dns-header-cd obj)
-            (dns-header-rcode obj))) 
+            `((,(dns-header-ra obj) 1)
+              (,(dns-header-z obj) 1) 
+              (,(dns-header-ad obj) 1)
+              (,(dns-header-cd obj) 1)
+              (,(dns-header-rcode obj) 4)))) 
     12)
 
 (defmethod %write-section ((obj dns-question) result start)
-  (let* ((name (dns-question-qname obj))
-         (type (dns-question-qtype obj))
-         (class (dns-question-qclass obj)))  
-    (let ((i (set-domain name result start)))
-      (set-16 type result i)
-      (incf i 2)
-      (set-16 class result i)
-      (+ i 2))))
-
-
+  (let ((i (set-domain (dns-question-qname obj) result start)))
+    (set-16 (dns-question-qtype obj)  result i)
+    (set-16 (dns-question-qclass obj) result (+ i 2))
+    (+ i 4)))
 
 (defmethod %write-section ((obj dns-rest) result start)
-  (let ((name (dns-rest-name obj))
-        (type (dns-rest-type obj))
-        (class (dns-rest-class obj))
-        (ttl (dns-rest-ttl obj))
-        (rdlength (dns-rest-rdlength obj))
-        (rdata (dns-rest-rdata obj)))
-    (let ((i (set-domain name result start)))
-      (set-16 type result i)
-      (incf i 2)
-      (set-16 class result i)
-      (incf i 2)
-      (set-16 ttl result i)
-      (incf i 2)
-      (set-16 rdlength result i)
-      (incf i 2)
-      (loop 
-        with index = i
-        finally (return index)
-        for ch across rdata
-        do 
-          (setf (aref result index) ch)
-          (incf index)))))
-
+  (let ((ttl (dns-rest-ttl obj))
+        (i (set-domain (dns-rest-name obj) result start)))
+    (set-16 (dns-rest-type obj) result i)
+    (set-16 (dns-rest-class obj) result (+ i 2))
+    (set-16 (ldb (byte 16 16) ttl) result (+ i 4))
+    (set-16 (ldb (byte 16 0) ttl) result (+ i 6))
+    (set-16 (dns-rest-rdlength obj) result (+ i 8))
+    (loop 
+      with index = (+ i 10)
+      finally (return index)
+      for ch across (dns-rest-rdata obj)
+      do 
+        (setf (aref result index) ch)
+        (incf index))))
 
