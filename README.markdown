@@ -1,5 +1,8 @@
 # DNS
-implementation of authoritative dns server
+[![Build Status](https://travis-ci.org/moratori/DNS.svg)](https://travis-ci.org/moratori/DNS)
+
+implementation of Domain Name System
+
 
 
 ## Usage

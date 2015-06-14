@@ -15,7 +15,20 @@
                :prove)
   :components ((:module "t"
                 :components
-                ((:test-file "dns"))))
+                ((:test-file "dns")
+
+                 (:module "parser"
+                  :components 
+                  ((:test-file "helper")))
+
+                 (:module "server"
+                  :components 
+                  ((:module "resolver"
+                    :components 
+                    ((:module "stub"
+                      :components 
+                      ((:test-file "stub")))))))))) 
+
 
   :defsystem-depends-on (:prove-asdf)
   :perform (test-op :after (op c)

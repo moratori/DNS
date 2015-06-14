@@ -19,19 +19,43 @@
   :depends-on (:usocket :cl-ppcre :cl-annot)
   :components ((:module "src"
                 :components
-                (
-(:file "errors")
-(:file "struct")
-(:file "util.bit")
-(:file "util.assemble")
-(:file "assemble")
-(:file "parse")
-(:file "templates")
-(:file "sender")
-(:file "resolver.stub")
-(:file "dns")
+                ((:module "def" 
+                  :components 
+                  ((:file "errors")
+                   (:file "struct")))
 
-)))
+                 (:module "util"
+                  :components 
+                  ((:file "bit")))
+
+                 (:module "assemble"
+                  :components 
+                  ((:file "helper")
+                   (:file "assemble")))
+                 
+                 (:module "parser"
+                  :components 
+                  ((:file "helper")
+                   (:file "parser"))) 
+
+                 (:module "server"
+                  :components 
+                  ((:file "sender")
+                   (:file "templates")
+                   (:module "authoriative"
+                    :components 
+                    ())
+                   (:module "resolver"
+                    :components 
+                    ((:module "stub"
+                      :components 
+                      ((:file "stub")))
+                     (:module "cache"
+                      :components 
+                      ())))))  
+
+                 (:file "dns"))))
+
   :description ""
   :long-description
   #.(with-open-file (stream (merge-pathnames

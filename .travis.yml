@@ -1,0 +1,19 @@
+language: common-lisp
+sudo: required
+
+env:
+  matrix:
+    - LISP=sbcl
+
+install:
+  - curl -L https://raw.githubusercontent.com/snmsts/roswell/master/scripts/install-for-ci.sh | sh
+  - export PATH=~/.roswell/bin:$PATH
+
+script:
+  - ros -s prove 
+    -e '(or (prove:run :dns-test)
+            (uiop:quit -1))'
+
+notifications:
+  email:
+    - teldev@live.jp
