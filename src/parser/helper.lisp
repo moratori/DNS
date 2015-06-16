@@ -4,11 +4,9 @@
   (:use :cl
         :cl-annot
         :dns.def.struct
+        :dns.def.types
         :dns.def.errors
-        :dns.util.bit
-        )
-  
-  )
+        :dns.util.bit))
 (in-package :dns.parser.helper)
 (enable-annot-syntax)
 
@@ -16,17 +14,42 @@
 
 (defun pointerp (len)
   "ラベル名長の上位2bitをみる"
+  (check-type len octet)
+  
   (= 3 (ldb (byte 2 6) len)))
 
 (defun calc-jump-pointer (len next)
+  "lenの上位2bitが11である場合は次の1Byteの値(next)
+   とlenの下位6bitでポインタを表しているのでそれを求める"
+  (check-type len  octet)
+  (check-type next octet)
+  
   (concat-bit 
     `((,(ldb (byte 6 0) len) 6)
       (,next 8))))
+
+
+(defun check-length (splited-domain)
+  "ドメイン名が長253以下であるか"
+  (assert (and (listp splited-domain)
+               (every #'stringp splited-domain)))
+
+  (let ((comma-len (1- (length splited-domain)))
+        (len (loop for each in splited-domain summing (length each))))
+    (unless 
+      (<= (+ comma-len len) 253)
+      (error 
+        (make-condition malformed-name
+          :msg "name too long")))))
+
 
 @export
 (defun %parse-name (array start)
   "startはドメイン名の格納が始まるarrayのインデックスを表す
    返り値は、ラベルのリストと次のセクションが始まるインデックス"
+  (check-type array dns-packet-array)
+  (check-type start unsigned-short)
+  
   (let* ((gp start)
          (result nil))
     (loop 
@@ -37,12 +60,21 @@
       (if (pointerp len)
         (progn 
           (incf gp)
-          (multiple-value-bind
-            (name _) 
-            (%parse-name array (calc-jump-pointer len (aref array gp)))
-            (declare (ignore _))
-            (setf result (nconc (reverse name) result))
-            (return-from exit)))
+          (let ((jmpptr (calc-jump-pointer len (aref array gp))))
+            
+            (unless (< 11 jmpptr start)
+              (error 
+                (make-condition 
+                  'malformed-name 
+                  :msg "Pointer is referring to an unusual location")))
+            
+            (multiple-value-bind
+              (name _) 
+              (%parse-name array jmpptr)
+              (declare (ignore _))
+              (setf result (nconc (reverse name) result))
+              (return-from exit))))
+
         (let ((s (make-string len)))
           (incf gp)
           (loop 
@@ -53,6 +85,7 @@
               (setf (aref s si) (code-char ch))
               (incf gp))
           (push s result))))
+    (check-length result)
     (values (reverse result) (1+ gp))))
 
 
@@ -61,6 +94,9 @@
   "arrayのstartから始まるQuestionセクションを
    dns-questionオブジェクトにして返す
    のと次のインデックスを返す"
+  (check-type array dns-packet-array)
+  (check-type start unsigned-short)
+
   (multiple-value-bind 
     (name index) (%parse-name array start)
     (values 
@@ -74,6 +110,9 @@
 (defun %parse-rest (array start)
   "arrayのスタートから始まる、Answer,Authority,Additional
    の何れかのセクションをdns-restオブジェクトとして返す"
+  (check-type array dns-packet-array)
+  (check-type start unsigned-short)
+
   (multiple-value-bind 
     (name index) (%parse-name array start)
     (let ((obj 
@@ -100,6 +139,10 @@
 (defun %parse-each-aaa (array start count)
   "Answer,Authority,Additionalの何れも同じフォーマットなので
    それぞれリストにして返す"
+  (check-type array dns-packet-array)
+  (check-type start unsigned-short)
+  (check-type count unsigned-short)
+
   (let ((gp start))
     (values 
       (loop 

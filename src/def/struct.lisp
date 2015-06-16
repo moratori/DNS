@@ -77,10 +77,12 @@
 
 
 
-
+@export 
+(defgeneric packet= (p1 p2)
+  (:documentation 
+    "DNSパケットやセクションの同値性判定メソッド"))
 
  
-@export
 (defmethod packet= ((p1 t) (p2 t))
   nil)
 

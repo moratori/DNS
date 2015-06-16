@@ -3,6 +3,7 @@
 (defpackage :dns.util.bit
   (:use :cl
         :cl-annot
+        :dns.def.types
         )
   )
 (in-package :dns.util.bit)
@@ -14,7 +15,10 @@
 (defun read-number (array start size)
   "unsigned-byte 8 の配列arrayのstartからsize 
    分だけ読んで整数にして返す"
-  (assert (typep array '(array (unsigned-byte 8) *)))
+  (check-type array dns-packet-array)
+  (check-type start unsigned-short)
+  (check-type size  unsigned-short)
+
   (concat-bit 
     (loop 
       for index from start below (+ start size) 
@@ -22,17 +26,21 @@
 
 
 (defun split-16-to-88 (n)
-  "16bit以内で表されるfixnumを1Byteの数２つで表す
+  "16bitで表されるnを1Byteの数２つで表す
    5346 => 20; 226"
+  (check-type n unsigned-short)
+
   (assert (< -1 n 65536))
   (values 
     (ldb (byte 8 8) n)
     (ldb (byte 8 0) n)))
 
+
 (defun integer->bit-list (n)
   "整数を、2進数を表す1,0のリストにする
    15 => (1 1 1 1)"
-  (assert (< -1 n))
+  (check-type n integer)
+
   (let (r)
     (loop
       named exit
@@ -51,6 +59,10 @@
 (defun bit-list->integer (bit-list)
   "二進数を表す1,0のリストを整数にする
    (1 1 1 1) => 15"
+  (assert (and 
+            (listp bit-list)
+            (every (lambda (e) (typep e 'bit)) bit-list)))
+  
   (loop 
     for i from (1- (length bit-list)) downto 0
     for each in bit-list
@@ -60,7 +72,10 @@
 (defun set-16 (n array index)
   "16bitで表される数nを1Byte毎に分割して
    それぞれを配列のindex,index+1で表される場所に格納"
-  (assert (< -1 n 65536))
+  (check-type n unsigned-short)
+  (check-type array dns-packet-array)
+  (check-type index unsigned-short)
+
   (multiple-value-bind 
     (a b) (split-16-to-88 n)
     (setf (aref array index) a)
@@ -68,6 +83,9 @@
 
 
 (defun integer->bit-list-with-size (sized-int)
+  "concat-bitのヘルパ関数"
+  (check-type sized-int list)
+
   (destructuring-bind 
     (int size) sized-int
     (let ((r (integer->bit-list int)))
@@ -77,10 +95,15 @@
         do (push 0 r)))
     r))) 
 
+
 @export
 (defun concat-bit (sized-int) 
   "引数に与えられた整数を並べた時にできる数を返す"
+  (check-type sized-int list)
+  
   (bit-list->integer 
     (mapcan 
       #'integer->bit-list-with-size 
       sized-int)))
+
+

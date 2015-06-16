@@ -4,6 +4,7 @@
 (defpackage dns.assemble.helper
   (:use :cl
         :dns.def.struct
+        :dns.def.types
         :cl-annot
         )
   )
@@ -18,8 +19,11 @@
   "arrayのi番目からdomain('www' 'yahoo' 'co' 'jp')を
    03 77 77 77 ... みたいなふうにsetする
    で次の書き込み開始indexを返す"
-  (assert (typep array '(array (unsigned-byte 8))))
-  (assert (typep splited-domain 'list))
+  (check-type array dns-packet-array)
+  (check-type i     unsigned-short)
+  (assert (and (listp splited-domain)
+               (every #'stringp splited-domain)))
+
   (let ((index i))
     (loop 
       for label in splited-domain
@@ -38,6 +42,9 @@
 
 (defun domain-len (splited-domain)
   "domain名のために使う長さを返す"
+  (assert (and (listp splited-domain)
+               (every #'stringp splited-domain)))
+
   (+ 1
      (length splited-domain)
      (apply #'+ (mapcar #'length splited-domain))))
@@ -45,9 +52,15 @@
 
 
 @export
+(defgeneric size (object)
+  (:method ((object dns-header))
+    ;; dns ヘッダの長さは固定長
+    12)
+  (:documentation 
+    "各セクションの長さやパケットの大きさを返す"))
+
+
 (defmethod size ((obj dns-packet))
-  "DNSパケットを(unsigned-byte 8)配列に直すときに
-   長さを求めるのに使う"
   (labels 
     ((sum (list)
        (reduce 
@@ -61,11 +74,6 @@
       (sum (dns-packet-authority obj))
       (sum (dns-packet-additional obj)))))
 
-
-(defmethod size ((obj dns-header))
-  "12Byteの固定長"
-  12) 
- 
 
 (defmethod size ((obj dns-question))
   (+ 

@@ -6,6 +6,7 @@
         :cl-annot
         :dns.def.struct
         :dns.def.errors
+        :dns.def.types
         :dns.util.bit
         :dns.parser.helper
         )
@@ -22,7 +23,7 @@
 @export
 (defun parse-array-to-dns-packet (array)
   "(unsigned-byte 8)な配列をdns-packetに変換する"
-  (declare (type (array (unsigned-byte 8) *) array))
+  (check-type array dns-packet-array)
 
   (let ((len (length array))
         (result (make-dns-packet)))
@@ -53,9 +54,11 @@
 
 (defun parse-header (array result start hcnt)
   "配列arrayをdns-headerオブジェクトにして
-   resultにセットする
-   qdcount > 0であるならば parse-quetionに渡す"
+   resultにセットする"
   (declare (ignore start hcnt))
+  (check-type array dns-packet-array)
+  (check-type result dns-packet)
+
   (let ((left  (aref array 2))
         (right (aref array 3)))
     (setf (dns-packet-header result)
@@ -83,6 +86,12 @@
 
 
 (defun parse-quetion (array result start qcnt)
+  "Quetionセクションをパースしてresultにセットする"
+  (check-type array  dns-packet-array)
+  (check-type result dns-packet)
+  (check-type start  unsigned-short)
+  (check-type qcnt   unsigned-short)
+
   (let ((gp start))
     (setf 
       (dns-packet-question result)
@@ -99,6 +108,12 @@
 
 
 (defun parse-aaa-section (f array result start cnt)
+  "Answer,Authority,Additionalのパースを行ってresultにセットする"
+  (check-type array  dns-packet-array)
+  (check-type result dns-packet)
+  (check-type start  unsigned-short)
+  (check-type cnt   unsigned-short)
+
   (multiple-value-bind 
     (section next)
     (%parse-each-aaa array start cnt)

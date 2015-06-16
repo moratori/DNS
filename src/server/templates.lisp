@@ -3,6 +3,7 @@
 (defpackage :dns.server.templates
   (:use :cl 
         :dns.def.struct
+        :dns.def.types
         :cl-annot
         )
   (:import-from 
@@ -17,7 +18,11 @@
 @export
 (defun make-query (id rd domain qtype)
   "クエリを作る"
-  (assert (typep domain 'string))
+  (check-type id unsigned-short)
+  (check-type rd bit)
+  (check-type domain string)
+  (check-type qtype unsigned-short)
+
   (make-dns-packet
     :header
      (make-dns-header
@@ -44,6 +49,11 @@
 
 (defun make-Arecord-answer (id domain ipaddress) 
   "Aレコードを返す標準的なパケットを作る"
+  (check-type id unsigned-short)
+  (check-type domain string)
+  (check-type qtype unsigned-short)
+  (check-type ipaddress array)
+
  (make-dns-packet
     :header
      (make-dns-header

@@ -22,6 +22,7 @@
                 ((:module "def" 
                   :components 
                   ((:file "errors")
+                   (:file "types")
                    (:file "struct")))
 
                  (:module "util"
